@@ -4,6 +4,9 @@ import { defineConfig } from 'astro/config';
 // https://astro.build/config
 export default defineConfig({
   vite: {
-    ssr: { noExternal: ['yaml'] },
+    optimizeDeps: { include: ['yaml', 'picomatch'] },
+    environments: {
+      astro: { optimizeDeps: { include: ['yaml', 'picomatch'] } },
+    },
   },
 });

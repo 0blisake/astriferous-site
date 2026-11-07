@@ -4,10 +4,16 @@ import { constellations } from '../data/constellations';
 import '../styles/global.css';
 import '../styles/art-direction.css';
 
+const slugify = (name: string) => name.toLowerCase().replaceAll(' ', '-');
+const articleConstellation = (entry: { id: string; data: { constellation?: string } }) => {
+  const folder = entry.id.split('/')[0];
+  return constellations.find((constellation) => slugify(constellation.name) === folder)?.name
+    ?? entry.data.constellation;
+};
 const allArticles = (await getCollection('articles')).filter((entry) => !entry.data.draft);
 const articlesByConstellation = Object.fromEntries(constellations.map((constellation) => [
   constellation.name,
-  allArticles.filter((article) => article.data.constellation === constellation.name)
+  allArticles.filter((article) => articleConstellation(article) === constellation.name)
     .sort((a, b) => (a.data.order ?? 999) - (b.data.order ?? 999)),
 ]));
 const renderedArticles = await Promise.all(allArticles.map(async (entry) => ({
@@ -15,13 +21,20 @@ const renderedArticles = await Promise.all(allArticles.map(async (entry) => ({
   Content: (await render(entry)).Content,
   idea: entry.data.idea,
 })));
-const slugify = (name: string) => name.toLowerCase().replaceAll(' ', '-');
 const carouselConstellations = [constellations[constellations.length - 1], ...constellations, constellations[0]];
 ---
 
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Google Tag Manager -->
+    <script is:inline async src="https://www.googletagmanager.com/gtm.js?id=GTM-PNSLRJRT"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){window.dataLayer.push(arguments);}
+      gtag('js', new Date());
+    </script>
+    <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#11120d" />

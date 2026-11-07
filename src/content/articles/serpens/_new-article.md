@@ -1,6 +1,5 @@
 ---
 title: New article
-constellation: "Serpens"
 draft: true
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: New article
-constellation: "Musca"
 draft: true
 ---
 

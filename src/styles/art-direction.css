@@ -154,3 +154,20 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:1px solid 
 .star-map,.figure-art{filter:none;will-change:opacity}
 .archive-emblem .archive-star-map{filter:drop-shadow(0 0 5px rgba(255,251,244,.42))}
 .archive-emblem .archive-figure-map{filter:drop-shadow(0 0 4px rgba(216,207,188,.25))}
+
+/* Low-luminance nebula haze, guided by the supplied star-cloud reference. */
+.star-field{background:radial-gradient(ellipse 25% 11% at 21% 31%,rgba(109,126,151,.12),transparent 100%),radial-gradient(ellipse 34% 12% at 32% 39%,rgba(94,111,132,.085),transparent 100%),radial-gradient(ellipse 29% 10% at 61% 58%,rgba(122,128,139,.07),transparent 100%),radial-gradient(ellipse 21% 8% at 73% 69%,rgba(109,126,151,.055),transparent 100%),radial-gradient(ellipse at 50% 56%,transparent 30%,rgba(17,18,13,.28) 72%,#11120d 110%)}
+.star-field::before{opacity:.82}
+.star-field::after{opacity:.38}
+
+/* Dark stone catches light at the horizon while staying below the stars. */
+.tile-floor{background:linear-gradient(180deg,rgba(7,8,7,.45),rgba(7,8,7,.25) 48%,rgba(7,8,7,.52)),repeating-conic-gradient(from 0deg,#292a25 0 25%,#49473f 0 50%) 0 0/clamp(92px,12vw,168px) clamp(92px,12vw,168px);filter:drop-shadow(0 -12px 24px rgba(0,0,0,.5))}
+.tile-floor::after{opacity:.25}
+.broken-wall{background:#252621;filter:drop-shadow(0 0 16px rgba(0,0,0,.62))}
+.wall-left,.wall-right{background:linear-gradient(135deg,#30312b,#1d1e1a 72%)}
+.wall-left::after,.wall-right::after{opacity:.42;background-image:repeating-linear-gradient(158deg,transparent 0 19px,rgba(216,207,188,.11) 20px 21px,transparent 22px 39px),repeating-linear-gradient(0deg,transparent 0 26px,rgba(11,12,10,.54) 27px 29px,transparent 30px 54px),repeating-linear-gradient(90deg,transparent 0 32px,rgba(11,12,10,.44) 33px 35px,transparent 36px 69px)}
+
+/* Fine double rules and corner filigree give the reading room a framed edge. */
+.archive-window{border-color:rgba(216,207,188,.66);box-shadow:0 28px 130px rgba(0,0,0,.78),0 0 0 1px rgba(216,207,188,.1) inset,0 0 42px rgba(216,207,188,.035)}
+.archive-window::before{inset:9px;border-color:rgba(216,207,188,.2)}
+.archive-window::after{content:"";position:absolute;z-index:4;inset:0;pointer-events:none;opacity:.62;background:linear-gradient(rgba(216,207,188,.8),rgba(216,207,188,.8)) left 0 top 0/30px 1px no-repeat,linear-gradient(rgba(216,207,188,.8),rgba(216,207,188,.8)) left 0 top 0/1px 30px no-repeat,linear-gradient(rgba(216,207,188,.8),rgba(216,207,188,.8)) right 0 top 0/30px 1px no-repeat,linear-gradient(rgba(216,207,188,.8),rgba(216,207,188,.8)) right 0 top 0/1px 30px no-repeat,linear-gradient(rgba(216,207,188,.8),rgba(216,207,188,.8)) left 0 bottom 0/30px 1px no-repeat,linear-gradient(rgba(216,207,188,.8),rgba(216,207,188,.8)) left 0 bottom 0/1px 30px no-repeat,linear-gradient(rgba(216,207,188,.8),rgba(216,207,188,.8)) right 0 bottom 0/30px 1px no-repeat,linear-gradient(rgba(216,207,188,.8),rgba(216,207,188,.8)) right 0 bottom 0/1px 30px no-repeat}

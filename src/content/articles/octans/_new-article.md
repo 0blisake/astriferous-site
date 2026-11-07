@@ -1,6 +1,5 @@
 ---
 title: New article
-constellation: "Octans"
 draft: true
 ---
 

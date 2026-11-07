@@ -1,6 +1,5 @@
 ---
 title: New article
-constellation: "Perseus"
 draft: true
 ---
 

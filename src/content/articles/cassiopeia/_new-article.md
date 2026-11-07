@@ -1,6 +1,5 @@
 ---
 title: New article
-constellation: "Cassiopeia"
 draft: true
 ---
 

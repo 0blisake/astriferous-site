@@ -6,7 +6,7 @@ const articles = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/articles' }),
   schema: z.object({
     title: z.string(),
-    constellation: z.string(),
+    constellation: z.string().optional(),
     idea: z.string().optional(),
     order: z.number().optional(),
     draft: z.boolean().default(false),

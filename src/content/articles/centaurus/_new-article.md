@@ -1,6 +1,5 @@
 ---
 title: New article
-constellation: "Centaurus"
 draft: true
 ---
 

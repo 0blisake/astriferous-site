@@ -1,6 +1,5 @@
 ---
 title: New article
-constellation: "Ursa Major"
 draft: true
 ---
 

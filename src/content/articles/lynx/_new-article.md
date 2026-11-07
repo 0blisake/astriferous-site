@@ -1,6 +1,5 @@
 ---
 title: New article
-constellation: "Lynx"
 draft: true
 ---
 
