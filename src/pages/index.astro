@@ -185,7 +185,11 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         if (autoplayTimer) window.clearTimeout(autoplayTimer);
         autoplayTimer = window.setTimeout(() => { autoplayTimer = undefined; scheduleAutoplay(4000); }, 7000);
       };
-      viewport?.addEventListener('scroll', markCenter, { passive: true });
+      let focusFrame = 0;
+      viewport?.addEventListener('scroll', () => {
+        if (focusFrame) return;
+        focusFrame = requestAnimationFrame(() => { focusFrame = 0; markCenter(); });
+      }, { passive: true });
       viewport?.addEventListener('wheel', (event) => {
         if (!viewport || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
         event.preventDefault();
@@ -223,7 +227,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
           const next = realIndex === constellations.length - 1
             ? slides[slides.length - 1]
             : slides.find((slide) => slide.dataset.clone !== 'true' && Number(slide.dataset.realIndex) === nextReal);
-          if (next) void centerOn(next, reducedMotion ? 0 : 6);
+          if (next) void centerOn(next, reducedMotion ? 0 : 8);
           scheduleAutoplay(reducedMotion ? 7500 : 10500);
           }, delay);
         };
@@ -266,7 +270,11 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         activeFigure!.classList.remove('figure-visible');
         const starPoints = constellation.stars.map(([x, y]) => `${x},${y}`).join(' ');
         const starNodes = constellation.stars.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.35"/>`).join('');
-        activeFigure!.innerHTML = `<svg class="archive-star-map" viewBox="0 0 100 100" aria-hidden="true"><polyline points="${starPoints}"/>${starNodes}</svg><svg class="archive-figure-map" viewBox="0 0 100 100" aria-hidden="true">${constellation.figure.map((path) => `<path d="${path}" pathLength="1"/>`).join('')}</svg>`;
+        const starXs = constellation.stars.map(([x]) => x);
+        const starYs = constellation.stars.map(([, y]) => y);
+        const padding = 12;
+        const viewBox = `${Math.min(...starXs) - padding} ${Math.min(...starYs) - padding} ${Math.max(...starXs) - Math.min(...starXs) + padding * 2} ${Math.max(...starYs) - Math.min(...starYs) + padding * 2}`;
+        activeFigure!.innerHTML = `<svg class="archive-star-map" viewBox="${viewBox}" aria-hidden="true"><polyline points="${starPoints}"/>${starNodes}</svg><svg class="archive-figure-map" viewBox="0 0 100 100" aria-hidden="true">${constellation.figure.map((path) => `<path d="${path}" pathLength="1"/>`).join('')}</svg>`;
         archive.querySelectorAll<HTMLButtonElement>('[data-constellation]').forEach((button) => {
           const selected = button.dataset.constellation === slug;
           button.classList.toggle('selected', selected);

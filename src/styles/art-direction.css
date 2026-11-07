@@ -147,3 +147,10 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:1px solid 
 .wall-right{right:-2.5%;transform:scaleX(-1);clip-path:polygon(0 9%,34% 12%,51% 19%,78% 21%,83% 39%,100% 44%,94% 61%,81% 64%,84% 79%,63% 83%,50% 95%,0 100%)}
 .wall-left::after,.wall-right::after{display:block;inset:-4%;opacity:.72;background-image:repeating-linear-gradient(158deg,transparent 0 19px,rgba(216,207,188,.16) 20px 21px,transparent 22px 39px),repeating-linear-gradient(0deg,transparent 0 26px,rgba(11,12,10,.46) 27px 29px,transparent 30px 54px),repeating-linear-gradient(90deg,transparent 0 32px,rgba(11,12,10,.35) 33px 35px,transparent 36px 69px);background-blend-mode:screen,multiply,multiply;mask-image:linear-gradient(145deg,#000,rgba(0,0,0,.62))}
 @media(max-width:640px){.tile-floor{left:-8%;right:-8%;bottom:-5%;height:34%}.broken-wall{bottom:5%;height:17%;width:18%}.wall-left{left:-4%}.wall-right{right:-4%}}
+
+/* Keep carousel motion light and let the reader emblem use its full star field. */
+.constellation-card{filter:none;transition:opacity .8s ease,transform 1.15s cubic-bezier(.4,0,.2,1)}
+.constellation-card.is-focused,.constellation-card:hover,.constellation-card:focus-within{filter:none}
+.star-map,.figure-art{filter:none;will-change:opacity}
+.archive-emblem .archive-star-map{filter:drop-shadow(0 0 5px rgba(255,251,244,.42))}
+.archive-emblem .archive-figure-map{filter:drop-shadow(0 0 4px rgba(216,207,188,.25))}
