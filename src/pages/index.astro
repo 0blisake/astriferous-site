@@ -11,10 +11,19 @@ const articleConstellation = (entry: { id: string; data: { constellation?: strin
     ?? entry.data.constellation;
 };
 const allArticles = (await getCollection('articles')).filter((entry) => !entry.data.draft);
+const compareArticles = (a: typeof allArticles[number], b: typeof allArticles[number]) => {
+  const aOrder = a.data.order;
+  const bOrder = b.data.order;
+  if (aOrder !== undefined && bOrder === undefined) return -1;
+  if (aOrder === undefined && bOrder !== undefined) return 1;
+  if (aOrder !== undefined && bOrder !== undefined && aOrder !== bOrder) return aOrder - bOrder;
+  return a.data.title.localeCompare(b.data.title, 'en', { numeric: true, sensitivity: 'base' })
+    || a.id.localeCompare(b.id, 'en', { numeric: true, sensitivity: 'base' });
+};
 const articlesByConstellation = Object.fromEntries(constellations.map((constellation) => [
   constellation.name,
   allArticles.filter((article) => articleConstellation(article) === constellation.name)
-    .sort((a, b) => (a.data.order ?? 999) - (b.data.order ?? 999)),
+    .sort(compareArticles),
 ]));
 const renderedArticles = await Promise.all(allArticles.map(async (entry) => ({
   entry,
@@ -89,38 +98,48 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
 
       <dialog class="archive-overlay" id="archive" aria-label="Constellation archive">
         <section class="archive-window">
-          <span class="frame-flourish frame-flourish--top-left" aria-hidden="true">❧</span>
-          <span class="frame-flourish frame-flourish--top-right" aria-hidden="true">❧</span>
-          <span class="frame-flourish frame-flourish--bottom-left" aria-hidden="true">❧</span>
-          <span class="frame-flourish frame-flourish--bottom-right" aria-hidden="true">❧</span>
           <button class="close-archive" aria-label="Close">×</button>
-          <aside class="archive-sidebar">
-          <div class="archive-emblem" data-active-figure aria-hidden="true"></div>
-            <p class="archive-kicker">CONSTELLATION</p>
-            <h2 data-active-name></h2>
-            <nav class="archive-constellations" aria-label="Constellations">
-              {constellations.map((constellation, index) => {
-                const slug = slugify(constellation.name);
-              return <button class="archive-constellation" data-constellation={slug} aria-pressed="false"><span>{String(index + 1).padStart(2, '0')}</span>{constellation.name}</button>;
-              })}
-            </nav>
-          </aside>
-          <section class="archive-contents" aria-label="Contents">
-            <p class="archive-kicker">CONTENTS</p>
-            {constellations.map((constellation) => {
-              const slug = slugify(constellation.name);
-              const articles = articlesByConstellation[constellation.name];
-              return <div class="contents-list" data-contents={slug} hidden>
-                {articles.length ? <ol>{articles.map((article) => <li><button data-article={article.id} data-idea={article.data.idea ?? ''} aria-current="false">{article.data.title}<span>↗</span></button></li>)}</ol> : <p class="unwritten">Unwritten.</p>}
-              </div>;
-            })}
-          </section>
-          <article class="reader-pane">
-            <p class="reader-idea" data-reader-idea></p>
-            <h2 class="reader-title" data-reader-title></h2>
-            <div class="reader-body" data-reader-body></div>
+          <article class="reader-pane" aria-label="Article reader">
+            <div class="reader-pane-frame" aria-hidden="true">
+              <img class="reader-pane-boundary" src="/images/reader-window/outer-frame.png" alt="" />
+              <img class="reader-frame-corner reader-frame-corner--top-left" src="/images/reader-window/corner-boundary.png" alt="" />
+              <img class="reader-frame-corner reader-frame-corner--top-right" src="/images/reader-window/corner-boundary.png" alt="" />
+              <img class="reader-frame-corner reader-frame-corner--bottom-left" src="/images/reader-window/corner-boundary.png" alt="" />
+              <img class="reader-frame-corner reader-frame-corner--bottom-right" src="/images/reader-window/corner-boundary.png" alt="" />
+            </div>
+            <header class="reader-heading">
+              <p class="reader-idea" data-reader-idea></p>
+              <div class="article-picker-wrap">
+                <button class="reader-title-picker" type="button" data-article-picker-trigger aria-controls="article-picker" aria-expanded="false">
+                  <span class="reader-title" data-reader-title>Contents</span>
+                  <span class="picker-mark" aria-hidden="true">⌄</span>
+                </button>
+                <div class="article-picker" id="article-picker" aria-label="Articles" hidden>
+                  {constellations.map((constellation) => {
+                    const slug = slugify(constellation.name);
+                    const articles = articlesByConstellation[constellation.name];
+                    return <div class="contents-list" data-contents={slug} hidden>
+                      {articles.length ? <ol>{articles.map((article) => <li><button data-article={article.id} data-idea={article.data.idea ?? ''} aria-current="false">{article.data.title}<span>↗</span></button></li>)}</ol> : <p class="unwritten">Unwritten.</p>}
+                    </div>;
+                  })}
+                </div>
+              </div>
+              <img class="reader-short-boundary" src="/images/reader-window/short-boundary.png" alt="" />
+            </header>
+            <div class="reader-scroll">
+              <div class="reader-body" data-reader-body></div>
+            </div>
             <span class="reader-ornament" aria-hidden="true">✦</span>
           </article>
+          <aside class="constellation-artwork" aria-label="Selected constellation">
+            <span class="constellation-number"><span data-active-number>01</span><span aria-hidden="true"> / 12</span></span>
+            <div class="archive-emblem" data-active-figure aria-hidden="true"></div>
+            <div class="constellation-controls" aria-label="Change constellation">
+              <button class="constellation-step constellation-step--previous" type="button" data-constellation-step="-1" aria-label="Previous constellation"><img src="/images/reader-window/constellation-arrow.png" alt="" /></button>
+              <h2 data-active-name></h2>
+              <button class="constellation-step constellation-step--next" type="button" data-constellation-step="1" aria-label="Next constellation"><img src="/images/reader-window/constellation-arrow.png" alt="" /></button>
+            </div>
+          </aside>
         </section>
       </dialog>
 
@@ -152,8 +171,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
 
       const centeredScroll = (slide: HTMLElement) => {
         if (!viewport) return 0;
-        const box = slide.getBoundingClientRect();
-        return viewport.scrollLeft + box.left + box.width / 2 - (viewport.getBoundingClientRect().left + viewport.clientWidth / 2);
+        return slide.offsetLeft + slide.offsetWidth / 2 - viewport.clientWidth / 2;
       };
       const centerOn = async (slide: HTMLElement, duration = 1.5) => {
         if (!viewport) return;
@@ -204,10 +222,10 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
       };
       const markCenter = () => {
         if (!viewport) return;
-        const middle = viewport.getBoundingClientRect().left + viewport.clientWidth / 2;
+        const middle = viewport.scrollLeft + viewport.clientWidth / 2;
         let closest: HTMLElement | undefined;
         let distance = Infinity;
-        slides.forEach((slide) => { const box = slide.getBoundingClientRect(); const next = Math.abs(box.left + box.width / 2 - middle); if (next < distance) { distance = next; closest = slide; } });
+        slides.forEach((slide) => { const next = Math.abs(slide.offsetLeft + slide.offsetWidth / 2 - middle); if (next < distance) { distance = next; closest = slide; } });
         slides.forEach((slide) => slide.classList.toggle('is-focused', slide === closest));
         if (closest) {
           const realIndex = Number(closest.dataset.realIndex);
@@ -302,14 +320,20 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
 
       const archive = document.querySelector<HTMLDialogElement>('#archive');
       const activeName = archive?.querySelector<HTMLElement>('[data-active-name]');
+      const activeNumber = archive?.querySelector<HTMLElement>('[data-active-number]');
       const activeFigure = archive?.querySelector<HTMLElement>('[data-active-figure]');
       const readerTitle = archive?.querySelector<HTMLElement>('[data-reader-title]');
+      const articlePicker = archive?.querySelector<HTMLElement>('#article-picker');
+      const articlePickerTrigger = archive?.querySelector<HTMLButtonElement>('[data-article-picker-trigger]');
       const readerIdea = archive?.querySelector<HTMLElement>('[data-reader-idea]');
       const readerBody = archive?.querySelector<HTMLElement>('[data-reader-body]');
+      const svgNamespace = 'http://www.w3.org/2000/svg';
       const selectConstellation = (slug: string) => {
         const constellation = constellations.find((item) => slugify(item.name) === slug);
         if (!constellation || !archive) return;
         activeName!.textContent = constellation.name;
+        activeNumber!.textContent = String(constellations.indexOf(constellation) + 1).padStart(2, '0');
+        archive.dataset.constellation = slug;
         activeFigure!.classList.remove('figure-visible');
         const starPoints = constellation.stars.map(([x, y]) => `${x},${y}`).join(' ');
         const starNodes = constellation.stars.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.35"/>`).join('');
@@ -317,17 +341,42 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         const starYs = constellation.stars.map(([, y]) => y);
         const padding = 12;
         const viewBox = `${Math.min(...starXs) - padding} ${Math.min(...starYs) - padding} ${Math.max(...starXs) - Math.min(...starXs) + padding * 2} ${Math.max(...starYs) - Math.min(...starYs) + padding * 2}`;
-        activeFigure!.innerHTML = `<svg class="archive-star-map" viewBox="${viewBox}" aria-hidden="true"><polyline points="${starPoints}"/>${starNodes}</svg><svg class="archive-figure-map" viewBox="0 0 100 100" aria-hidden="true">${constellation.figure.map((path) => `<path d="${path}" pathLength="1"/>`).join('')}</svg>`;
-        archive.querySelectorAll<HTMLButtonElement>('[data-constellation]').forEach((button) => {
-          const selected = button.dataset.constellation === slug;
-          button.classList.toggle('selected', selected);
-          button.setAttribute('aria-pressed', String(selected));
+        const starMap = document.createElementNS(svgNamespace, 'svg');
+        starMap.classList.add('archive-star-map');
+        starMap.setAttribute('viewBox', viewBox);
+        starMap.setAttribute('aria-hidden', 'true');
+        const starLine = document.createElementNS(svgNamespace, 'polyline');
+        starLine.setAttribute('points', starPoints);
+        starMap.append(starLine);
+        constellation.stars.forEach(([x, y]) => {
+          const star = document.createElementNS(svgNamespace, 'circle');
+          star.setAttribute('cx', String(x));
+          star.setAttribute('cy', String(y));
+          star.setAttribute('r', '1.35');
+          starMap.append(star);
         });
+        const figureMap = document.createElementNS(svgNamespace, 'svg');
+        figureMap.classList.add('archive-figure-map');
+        figureMap.setAttribute('viewBox', '0 0 100 100');
+        figureMap.setAttribute('aria-hidden', 'true');
+        constellation.figure.forEach((figurePath) => {
+          const path = document.createElementNS(svgNamespace, 'path');
+          path.setAttribute('d', figurePath);
+          path.setAttribute('pathLength', '1');
+          figureMap.append(path);
+        });
+        activeFigure!.replaceChildren(starMap, figureMap);
         archive.querySelectorAll<HTMLElement>('[data-contents]').forEach((contents) => { contents.hidden = contents.dataset.contents !== slug; });
         archive.querySelectorAll<HTMLButtonElement>('[data-article]').forEach((button) => { button.setAttribute('aria-current', 'false'); button.classList.remove('selected'); });
-        readerTitle!.textContent = '';
+        readerTitle!.textContent = 'Contents';
         readerIdea!.textContent = '';
         readerBody!.replaceChildren();
+        const currentContents = archive.querySelector<HTMLElement>(`[data-contents="${CSS.escape(slug)}"]`);
+        const hasArticles = Boolean(currentContents?.querySelector('[data-article]'));
+        articlePickerTrigger!.disabled = !hasArticles;
+        articlePicker!.hidden = true;
+        articlePickerTrigger!.setAttribute('aria-expanded', 'false');
+        if (!hasArticles) readerBody!.textContent = 'Unwritten.';
         if (reducedMotion) activeFigure?.classList.add('figure-visible');
         else requestAnimationFrame(() => activeFigure?.classList.add('figure-visible'));
       };
@@ -372,7 +421,37 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
           openArchive(slugify(slide.getAttribute('aria-label') ?? ''));
         });
       });
-      archive?.querySelectorAll<HTMLButtonElement>('[data-constellation]').forEach((button) => button.addEventListener('click', () => selectConstellation(button.dataset.constellation ?? '')));
+      archive?.querySelectorAll<HTMLButtonElement>('[data-constellation-step]').forEach((button) => button.addEventListener('click', () => {
+        const currentIndex = constellations.findIndex((item) => slugify(item.name) === archive.dataset.constellation);
+        const direction = Number(button.dataset.constellationStep);
+        const nextIndex = (currentIndex + direction + constellations.length) % constellations.length;
+        selectConstellation(slugify(constellations[nextIndex].name));
+      }));
+      articlePickerTrigger?.addEventListener('click', () => {
+        const willOpen = articlePicker!.hidden;
+        articlePicker!.hidden = !willOpen;
+        articlePickerTrigger.setAttribute('aria-expanded', String(willOpen));
+      });
+      articlePickerTrigger?.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowDown') return;
+        event.preventDefault();
+        articlePicker!.hidden = false;
+        articlePickerTrigger.setAttribute('aria-expanded', 'true');
+        archive?.querySelector<HTMLElement>(`[data-contents="${CSS.escape(archive.dataset.constellation ?? '')}"] [data-article]`)?.focus();
+      });
+      archive?.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || articlePicker!.hidden) return;
+        event.preventDefault();
+        event.stopPropagation();
+        articlePicker!.hidden = true;
+        articlePickerTrigger!.setAttribute('aria-expanded', 'false');
+        articlePickerTrigger!.focus();
+      }, true);
+      archive?.addEventListener('click', (event) => {
+        if (!(event.target instanceof Element) || event.target.closest('.article-picker-wrap')) return;
+        articlePicker!.hidden = true;
+        articlePickerTrigger!.setAttribute('aria-expanded', 'false');
+      });
       archive?.querySelectorAll<HTMLButtonElement>('[data-article]').forEach((button) => button.addEventListener('click', () => {
         const template = document.querySelector<HTMLTemplateElement>(`#article-${CSS.escape(button.dataset.article ?? '')}`);
         if (!template || !readerBody) return;
@@ -380,6 +459,8 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         readerIdea!.textContent = button.dataset.idea ?? '';
         readerBody.replaceChildren(template.content.cloneNode(true));
         archive?.querySelectorAll<HTMLButtonElement>('[data-article]').forEach((item) => { const selected = item === button; item.classList.toggle('selected', selected); item.setAttribute('aria-current', String(selected)); });
+        articlePicker!.hidden = true;
+        articlePickerTrigger!.setAttribute('aria-expanded', 'false');
         if (!reducedMotion) { readerBody.classList.remove('article-arrive'); void readerBody.offsetWidth; readerBody.classList.add('article-arrive'); }
       }));
       archive?.querySelector('.close-archive')?.addEventListener('click', () => { archive.classList.remove('opening'); archive.close(); });

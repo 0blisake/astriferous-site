@@ -21,6 +21,6 @@ draft: true
 Write the article here in Markdown.
 ```
 
-Use one of the existing folders: `ursa-major`, `centaurus`, `lynx`, `perseus`, `orion`, `musca`, `octans`, `fornax`, `serpens`, `sagittarius`, `cassiopeia`, or `equuleus`. The folder is authoritative even if the optional `constellation` frontmatter is present. You can set `order: 1` to place an article before others; without it, articles are listed by filename.
+Use one of the existing folders: `ursa-major`, `centaurus`, `lynx`, `perseus`, `orion`, `musca`, `octans`, `fornax`, `serpens`, `sagittarius`, `cassiopeia`, or `equuleus`. The folder is authoritative even if the optional `constellation` frontmatter is present. You can set `order: 1` to place an article before articles without an explicit order. Lower numbers come first; ties, and all articles without an order, sort by title alphanumerically (so `2` comes before `10`).
 
 New Markdown files are included in the next production build and deployment. The live site does not watch your computer's folders, so adding or editing an article requires publishing the changed files to GitHub to trigger a new Vercel deployment.
