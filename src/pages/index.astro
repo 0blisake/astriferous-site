@@ -80,17 +80,16 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
                     <svg class="figure-art" viewBox="0 0 100 100" aria-hidden="true">{constellation.figure.map((path) => <path d={path} pathLength="1" />)}</svg>
                   </div>
                 </div>
-                <div class="constellation-copy"><span class="constellation-number">{String(index + 1).padStart(2, '0')}</span><h2>{constellation.name}</h2><p>{constellation.epithet}</p></div>
-                <button class="enter-portal" data-open={slug} aria-haspopup="dialog">Enter</button>
+                <div class="constellation-copy"><h2>{constellation.name}</h2><p>{constellation.epithet}</p></div>
+                <button class="enter-portal" data-open={slug} aria-haspopup="dialog">View</button>
               </article>;
             })}
           </div>
         </div>
         <div class="carousel-caption" aria-live="polite" aria-atomic="true">
-          <span class="constellation-number" data-caption-number>01</span>
           <h1 data-caption-name>{constellations[0].name}</h1>
           <p data-caption-epithet>{constellations[0].epithet}</p>
-          <button class="caption-enter" data-caption-open aria-haspopup="dialog">Enter</button>
+          <button class="caption-enter" data-caption-open aria-haspopup="dialog">View</button>
         </div>
         <div class="horizon" aria-hidden="true"></div>
         <a class="instagram-contact" href="https://www.instagram.com/oblisake_/" target="_blank" rel="noopener noreferrer" aria-label="Instagram, oblisake_">Instagram <span>@oblisake_</span></a>
@@ -151,7 +150,6 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
       const slugify = (name: string) => name.toLowerCase().replaceAll(' ', '-');
       const viewport = document.querySelector<HTMLElement>('.carousel-viewport');
       const slides = [...document.querySelectorAll<HTMLElement>('[data-slide]')];
-      const captionNumber = document.querySelector<HTMLElement>('[data-caption-number]');
       const captionName = document.querySelector<HTMLElement>('[data-caption-name]');
       const captionEpithet = document.querySelector<HTMLElement>('[data-caption-epithet]');
       const captionOpen = document.querySelector<HTMLButtonElement>('[data-caption-open]');
@@ -184,6 +182,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         if (reducedMotion) {
           viewport.scrollLeft = destination;
           viewport.classList.remove('is-animating');
+          markCenter();
           return;
         }
         try {
@@ -204,14 +203,13 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
             onComplete: () => {
               if (requestId !== scrollRequestId) return;
               activeScrollAnimation = undefined;
-              viewport.classList.remove('is-animating');
-              if (slide.dataset.clone !== 'true') return;
-              const realIndex = Number(slide.dataset.realIndex);
-              const realSlide = slides.find((item) => item.dataset.clone !== 'true' && Number(item.dataset.realIndex) === realIndex);
-              if (realSlide) {
-                viewport.scrollLeft = centeredScroll(realSlide);
-                markCenter();
+              if (slide.dataset.clone === 'true') {
+                const realIndex = Number(slide.dataset.realIndex);
+                const realSlide = slides.find((item) => item.dataset.clone !== 'true' && Number(item.dataset.realIndex) === realIndex);
+                if (realSlide) viewport.scrollLeft = centeredScroll(realSlide);
               }
+              viewport.classList.remove('is-animating');
+              markCenter();
             },
           });
         } catch {
@@ -220,17 +218,19 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
           viewport.scrollTo({ left: destination, behavior: 'smooth' });
         }
       };
+      let focusedSlide: HTMLElement | undefined;
       const markCenter = () => {
         if (!viewport) return;
         const middle = viewport.scrollLeft + viewport.clientWidth / 2;
         let closest: HTMLElement | undefined;
         let distance = Infinity;
         slides.forEach((slide) => { const next = Math.abs(slide.offsetLeft + slide.offsetWidth / 2 - middle); if (next < distance) { distance = next; closest = slide; } });
-        slides.forEach((slide) => slide.classList.toggle('is-focused', slide === closest));
-        if (closest) {
+        if (closest && focusedSlide !== closest) {
+          focusedSlide?.classList.remove('is-focused');
+          closest.classList.add('is-focused');
+          focusedSlide = closest;
           const realIndex = Number(closest.dataset.realIndex);
           const name = closest.getAttribute('aria-label') ?? '';
-          captionNumber!.textContent = String(realIndex + 1).padStart(2, '0');
           captionName!.textContent = name;
           captionEpithet!.textContent = constellations[realIndex]?.epithet ?? '';
           captionOpen!.dataset.open = slugify(name);
@@ -240,10 +240,33 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         if (autoplayTimer) window.clearTimeout(autoplayTimer);
         autoplayTimer = window.setTimeout(() => { autoplayTimer = undefined; scheduleAutoplay(4000); }, 7000);
       };
+      const pauseCarousel = () => {
+        if (autoplayTimer) window.clearTimeout(autoplayTimer);
+        autoplayTimer = undefined;
+        scrollRequestId++;
+        activeScrollAnimation?.stop();
+        activeScrollAnimation = undefined;
+        if (wheelFrame) { cancelAnimationFrame(wheelFrame); wheelFrame = 0; }
+        viewport?.classList.remove('is-animating');
+        nebulaAnimation?.stop();
+        nebulaAnimation = undefined;
+      };
+      const resumeCarousel = () => {
+        if (reducedMotion || !viewport || slides.length < 2) return;
+        markCenter();
+        if (focusedSlide && Math.abs(centeredScroll(focusedSlide) - viewport.scrollLeft) > 1) {
+          void centerOn(focusedSlide, 0.9);
+          scheduleAutoplay(5000);
+        } else scheduleAutoplay(3500);
+      };
       let focusFrame = 0;
       viewport?.addEventListener('scroll', () => {
+        if (viewport?.classList.contains('is-animating')) return;
         if (focusFrame) return;
-        focusFrame = requestAnimationFrame(() => { focusFrame = 0; markCenter(); });
+        focusFrame = requestAnimationFrame(() => {
+          focusFrame = 0;
+          if (!viewport?.classList.contains('is-animating')) markCenter();
+        });
       }, { passive: true });
       viewport?.addEventListener('wheel', (event) => {
         if (!viewport || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
@@ -327,6 +350,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
       const articlePickerTrigger = archive?.querySelector<HTMLButtonElement>('[data-article-picker-trigger]');
       const readerIdea = archive?.querySelector<HTMLElement>('[data-reader-idea]');
       const readerBody = archive?.querySelector<HTMLElement>('[data-reader-body]');
+      let readerArrival: Animation | undefined;
       const svgNamespace = 'http://www.w3.org/2000/svg';
       const selectConstellation = (slug: string) => {
         const constellation = constellations.find((item) => slugify(item.name) === slug);
@@ -334,42 +358,40 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         activeName!.textContent = constellation.name;
         activeNumber!.textContent = String(constellations.indexOf(constellation) + 1).padStart(2, '0');
         archive.dataset.constellation = slug;
-        activeFigure!.classList.remove('figure-visible');
-        const starPoints = constellation.stars.map(([x, y]) => `${x},${y}`).join(' ');
-        const starNodes = constellation.stars.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.35"/>`).join('');
         const starXs = constellation.stars.map(([x]) => x);
         const starYs = constellation.stars.map(([, y]) => y);
-        const padding = 12;
-        const viewBox = `${Math.min(...starXs) - padding} ${Math.min(...starYs) - padding} ${Math.max(...starXs) - Math.min(...starXs) + padding * 2} ${Math.max(...starYs) - Math.min(...starYs) + padding * 2}`;
+        const minX = Math.min(...starXs);
+        const minY = Math.min(...starYs);
+        const padding = 6;
+        const viewBoxWidth = Math.max(...starXs) - minX + padding * 2;
+        const viewBoxHeight = Math.max(...starYs) - minY + padding * 2;
+        const normalizedStars = constellation.stars.map(([x, y]) => [
+          ((x - minX + padding) / viewBoxWidth) * 100,
+          ((y - minY + padding) / viewBoxHeight) * 100,
+        ]);
+        const starPoints = normalizedStars.map(([x, y]) => `${x},${y}`).join(' ');
         const starMap = document.createElementNS(svgNamespace, 'svg');
         starMap.classList.add('archive-star-map');
-        starMap.setAttribute('viewBox', viewBox);
+        starMap.setAttribute('viewBox', '0 0 100 100');
         starMap.setAttribute('aria-hidden', 'true');
+        starMap.setAttribute('preserveAspectRatio', 'none');
         const starLine = document.createElementNS(svgNamespace, 'polyline');
         starLine.setAttribute('points', starPoints);
         starMap.append(starLine);
-        constellation.stars.forEach(([x, y]) => {
-          const star = document.createElementNS(svgNamespace, 'circle');
-          star.setAttribute('cx', String(x));
-          star.setAttribute('cy', String(y));
-          star.setAttribute('r', '1.35');
-          starMap.append(star);
+        const starPointsLayer = normalizedStars.map(([x, y]) => {
+          const star = document.createElement('span');
+          star.classList.add('archive-star-point');
+          star.style.setProperty('--star-x', `${x}%`);
+          star.style.setProperty('--star-y', `${y}%`);
+          return star;
         });
-        const figureMap = document.createElementNS(svgNamespace, 'svg');
-        figureMap.classList.add('archive-figure-map');
-        figureMap.setAttribute('viewBox', '0 0 100 100');
-        figureMap.setAttribute('aria-hidden', 'true');
-        constellation.figure.forEach((figurePath) => {
-          const path = document.createElementNS(svgNamespace, 'path');
-          path.setAttribute('d', figurePath);
-          path.setAttribute('pathLength', '1');
-          figureMap.append(path);
-        });
-        activeFigure!.replaceChildren(starMap, figureMap);
+        activeFigure!.replaceChildren(starMap, ...starPointsLayer);
         archive.querySelectorAll<HTMLElement>('[data-contents]').forEach((contents) => { contents.hidden = contents.dataset.contents !== slug; });
         archive.querySelectorAll<HTMLButtonElement>('[data-article]').forEach((button) => { button.setAttribute('aria-current', 'false'); button.classList.remove('selected'); });
         readerTitle!.textContent = 'Contents';
         readerIdea!.textContent = '';
+        readerArrival?.cancel();
+        readerArrival = undefined;
         readerBody!.replaceChildren();
         const currentContents = archive.querySelector<HTMLElement>(`[data-contents="${CSS.escape(slug)}"]`);
         const hasArticles = Boolean(currentContents?.querySelector('[data-article]'));
@@ -377,10 +399,9 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         articlePicker!.hidden = true;
         articlePickerTrigger!.setAttribute('aria-expanded', 'false');
         if (!hasArticles) readerBody!.textContent = 'Unwritten.';
-        if (reducedMotion) activeFigure?.classList.add('figure-visible');
-        else requestAnimationFrame(() => activeFigure?.classList.add('figure-visible'));
       };
       const openArchive = (slug: string) => {
+        pauseCarousel();
         selectConstellation(slug);
         archive?.showModal();
         archive?.classList.add('opening');
@@ -403,6 +424,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
       slides.forEach((slide) => {
         const target = slide.querySelector<HTMLElement>('[data-figure-trigger]');
         const trace = () => {
+          if (viewport?.classList.contains('is-animating')) return;
           slide.classList.add('tracing');
           if (!reducedMotion) slide.querySelectorAll<SVGPathElement>('.figure-art path').forEach((path, pathIndex) => {
             path.style.transitionDelay = `${pathIndex * 85}ms`;
@@ -461,8 +483,21 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         archive?.querySelectorAll<HTMLButtonElement>('[data-article]').forEach((item) => { const selected = item === button; item.classList.toggle('selected', selected); item.setAttribute('aria-current', String(selected)); });
         articlePicker!.hidden = true;
         articlePickerTrigger!.setAttribute('aria-expanded', 'false');
-        if (!reducedMotion) { readerBody.classList.remove('article-arrive'); void readerBody.offsetWidth; readerBody.classList.add('article-arrive'); }
+        if (!reducedMotion) {
+          readerArrival?.cancel();
+          readerArrival = readerBody.animate(
+            [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'translateY(0)' }],
+            { duration: 440, easing: 'cubic-bezier(.16,1,.3,1)' },
+          );
+        }
       }));
+      archive?.addEventListener('close', () => {
+        archive.classList.remove('opening');
+        stoneSweepAnimation?.stop();
+        stoneSweepAnimation = undefined;
+        if (stoneLightSweep) stoneLightSweep.style.opacity = '0';
+        resumeCarousel();
+      });
       archive?.querySelector('.close-archive')?.addEventListener('click', () => { archive.classList.remove('opening'); archive.close(); });
       archive?.addEventListener('click', (event) => { if (event.target === archive) archive.close(); });
     </script>
