@@ -46,10 +46,12 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
     <main>
       <section class="observatory" id="observatory" aria-label="The observatory">
         <div class="dome-ribs" aria-hidden="true"></div>
+        <div class="nebula-haze" aria-hidden="true"></div>
         <div class="star-field" aria-hidden="true"></div>
         <div class="broken-wall wall-left" aria-hidden="true"></div>
         <div class="broken-wall wall-right" aria-hidden="true"></div>
         <div class="tile-floor" aria-hidden="true"></div>
+        <div class="stone-light-sweep" aria-hidden="true"></div>
         <div class="carousel-controls" aria-label="Constellation carousel">
           <button class="carousel-arrow" data-direction="-1" aria-label="Previous constellation">←</button>
           <span class="carousel-mark" aria-hidden="true">✦</span>
@@ -82,10 +84,15 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
           <button class="caption-enter" data-caption-open aria-haspopup="dialog">Enter</button>
         </div>
         <div class="horizon" aria-hidden="true"></div>
+        <a class="instagram-contact" href="https://www.instagram.com/oblisake_/" target="_blank" rel="noopener noreferrer" aria-label="Instagram, oblisake_">Instagram <span>@oblisake_</span></a>
       </section>
 
       <dialog class="archive-overlay" id="archive" aria-label="Constellation archive">
         <section class="archive-window">
+          <span class="frame-flourish frame-flourish--top-left" aria-hidden="true">❧</span>
+          <span class="frame-flourish frame-flourish--top-right" aria-hidden="true">❧</span>
+          <span class="frame-flourish frame-flourish--bottom-left" aria-hidden="true">❧</span>
+          <span class="frame-flourish frame-flourish--bottom-right" aria-hidden="true">❧</span>
           <button class="close-archive" aria-label="Close">×</button>
           <aside class="archive-sidebar">
           <div class="archive-emblem" data-active-figure aria-hidden="true"></div>
@@ -129,10 +136,15 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
       const captionName = document.querySelector<HTMLElement>('[data-caption-name]');
       const captionEpithet = document.querySelector<HTMLElement>('[data-caption-epithet]');
       const captionOpen = document.querySelector<HTMLButtonElement>('[data-caption-open]');
+      const nebula = document.querySelector<HTMLElement>('.nebula-haze');
+      const stoneLightSweep = document.querySelector<HTMLElement>('.stone-light-sweep');
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       let motionModule: Promise<typeof import('motion')> | undefined;
       const loadMotion = () => motionModule ??= import('motion');
       let activeScrollAnimation: { stop: () => void } | undefined;
+      let scrollRequestId = 0;
+      let nebulaAnimation: { stop: () => void } | undefined;
+      let stoneSweepAnimation: { stop: () => void } | undefined;
       let autoplayTimer: number | undefined;
       let scheduleAutoplay: (delay: number) => void = () => {};
       let wheelFrame = 0;
@@ -145,6 +157,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
       };
       const centerOn = async (slide: HTMLElement, duration = 1.5) => {
         if (!viewport) return;
+        const requestId = ++scrollRequestId;
         if (wheelFrame) { cancelAnimationFrame(wheelFrame); wheelFrame = 0; }
         activeScrollAnimation?.stop();
         activeScrollAnimation = undefined;
@@ -157,11 +170,21 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         }
         try {
           const { animate } = await loadMotion();
+          if (requestId !== scrollRequestId) return;
+          if (!reducedMotion && !nebulaAnimation && nebula) {
+            nebulaAnimation = animate(nebula, {
+              x: ['-1.5%', '1.25%', '-1.5%'],
+              y: ['0%', '1.1%', '0%'],
+              scale: [1, 1.035, 1],
+              opacity: [0.58, 0.84, 0.58],
+            }, { duration: 116, ease: 'easeInOut', repeat: Infinity });
+          }
           activeScrollAnimation = animate(viewport.scrollLeft, destination, {
             duration,
             ease: [0.16, 1, 0.3, 1],
             onUpdate: (latest) => { viewport.scrollLeft = latest; },
             onComplete: () => {
+              if (requestId !== scrollRequestId) return;
               activeScrollAnimation = undefined;
               viewport.classList.remove('is-animating');
               if (slide.dataset.clone !== 'true') return;
@@ -174,6 +197,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
             },
           });
         } catch {
+          if (requestId !== scrollRequestId) return;
           viewport.classList.remove('is-animating');
           viewport.scrollTo({ left: destination, behavior: 'smooth' });
         }
@@ -207,6 +231,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         if (!viewport || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
         event.preventDefault();
         stopAutoplay();
+        scrollRequestId++;
         activeScrollAnimation?.stop();
         activeScrollAnimation = undefined;
         viewport.classList.add('is-animating');
@@ -230,7 +255,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
       requestAnimationFrame(() => { const start = slides.find((slide) => slide.dataset.clone !== 'true' && Number(slide.dataset.realIndex) === 0); if (viewport && start) viewport.scrollLeft = centeredScroll(start); markCenter(); });
       markCenter();
 
-      if (viewport && slides.length > 1) {
+      if (viewport && slides.length > 1 && !reducedMotion) {
         scheduleAutoplay = (delay: number) => {
           if (autoplayTimer) window.clearTimeout(autoplayTimer);
           autoplayTimer = window.setTimeout(() => {
@@ -241,11 +266,18 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
             ? slides[slides.length - 1]
             : slides.find((slide) => slide.dataset.clone !== 'true' && Number(slide.dataset.realIndex) === nextReal);
           if (next) void centerOn(next, reducedMotion ? 0 : 8);
-          scheduleAutoplay(reducedMotion ? 7500 : 10500);
+          scheduleAutoplay(10500);
           }, delay);
         };
         scheduleAutoplay(3500);
-        viewport.addEventListener('pointerdown', stopAutoplay);
+        viewport.addEventListener('pointerdown', () => {
+          stopAutoplay();
+          scrollRequestId++;
+          activeScrollAnimation?.stop();
+          activeScrollAnimation = undefined;
+          if (wheelFrame) { cancelAnimationFrame(wheelFrame); wheelFrame = 0; }
+          viewport.classList.remove('is-animating');
+        });
         viewport.addEventListener('focusin', stopAutoplay);
       }
       document.querySelectorAll<HTMLButtonElement>('.carousel-arrow').forEach((button) => button.addEventListener('click', () => {
@@ -265,9 +297,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
       }));
       captionOpen?.addEventListener('click', () => {
         const slug = captionOpen.dataset.open ?? '';
-        selectConstellation(slug);
-        archive?.showModal();
-        archive?.classList.add('opening');
+        openArchive(slug);
       });
 
       const archive = document.querySelector<HTMLDialogElement>('#archive');
@@ -301,6 +331,25 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         if (reducedMotion) activeFigure?.classList.add('figure-visible');
         else requestAnimationFrame(() => activeFigure?.classList.add('figure-visible'));
       };
+      const openArchive = (slug: string) => {
+        selectConstellation(slug);
+        archive?.showModal();
+        archive?.classList.add('opening');
+        if (!reducedMotion && stoneLightSweep) {
+          void (async () => {
+            try {
+              const { animate } = await loadMotion();
+              stoneSweepAnimation?.stop();
+              stoneSweepAnimation = animate(stoneLightSweep, {
+                x: ['-25vw', '120vw'],
+                opacity: [0, 0.32, 0],
+              }, { duration: 3.4, ease: 'easeInOut' });
+            } catch {
+              stoneLightSweep.style.opacity = '0';
+            }
+          })();
+        }
+      };
 
       slides.forEach((slide) => {
         const target = slide.querySelector<HTMLElement>('[data-figure-trigger]');
@@ -320,9 +369,7 @@ const carouselConstellations = [constellations[constellations.length - 1], ...co
         target?.addEventListener('focus', trace);
         target?.addEventListener('blur', clear);
         slide.querySelector<HTMLButtonElement>('[data-open]')?.addEventListener('click', () => {
-          selectConstellation(slugify(slide.getAttribute('aria-label') ?? ''));
-          archive?.showModal();
-          archive?.classList.add('opening');
+          openArchive(slugify(slide.getAttribute('aria-label') ?? ''));
         });
       });
       archive?.querySelectorAll<HTMLButtonElement>('[data-constellation]').forEach((button) => button.addEventListener('click', () => selectConstellation(button.dataset.constellation ?? '')));
