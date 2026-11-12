@@ -2,7 +2,6 @@
 title: Philosophy of you; Choice over Tolerance.
 idea: Agency
 draft: false
-order: "1"
 ---
 
 People are a mess. Capitalism has shaped us, society has built our habits and before we even know it, our identity has been handed to us served on a silver platter without ever having looked at the menu. Individualism is in our bloods and yet we live as a community, as products for these corporations. 
